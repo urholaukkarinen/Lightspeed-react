@@ -9,119 +9,125 @@ import Header from "./components/Header";
 import { VideoContainer, MainContainer } from "./styles/appStyles";
 
 const appReducer = (state, action) => {
-  switch (action.type) {
-    case "initStream": {
-      return { ...state, stream: action.stream };
-    }
-    case "info": {
-      return { ...state, viewers: action.viewers };
-    }
+    switch (action.type) {
+        case "initStream":
+            {
+                return {...state, stream: action.stream };
+            }
+        case "info":
+            {
+                return {...state, viewers: action.viewers };
+            }
 
-    default: {
-      return { ...state };
+        default:
+            {
+                return {...state };
+            }
     }
-  }
 };
 
 const initialState = {
-  stream: null,
-  viewers: null,
+    stream: null,
+    viewers: null,
 };
 
 const App = () => {
-  const [state, dispatch] = useReducer(appReducer, initialState);
-  const { pc } = useRTC();
-  const { socket } = useSocket();
+    const [state, dispatch] = useReducer(appReducer, initialState);
+    const { pc } = useRTC();
+    const { socket } = useSocket();
 
-  // Offer to receive 1 audio, and 1 video tracks
-  pc.addTransceiver("audio", { direction: "recvonly" });
-  // pc.addTransceiver('video', { 'direction': 'recvonly' })
-  pc.addTransceiver("video", { direction: "recvonly" });
+    // Offer to receive 1 audio, and 1 video tracks
+    pc.addTransceiver("audio", { direction: "recvonly" });
+    // pc.addTransceiver('video', { 'direction': 'recvonly' })
+    pc.addTransceiver("video", { direction: "recvonly" });
 
-  pc.ontrack = (event) => {
-    const {
-      track: { kind },
-      streams,
-    } = event;
+    pc.ontrack = (event) => {
+        const {
+            track: { kind },
+            streams,
+        } = event;
 
-    if (kind === "video") {
-      dispatch({ type: "initStream", stream: streams[0] });
-    }
-  };
-
-  pc.onicecandidate = (e) => {
-    const { candidate } = e;
-    if (candidate) {
-      console.log("Candidate success");
-      socket.send(
-        JSON.stringify({
-          event: "candidate",
-          data: e.candidate,
-        })
-      );
-    }
-  };
-
-  if (socket) {
-    socket.onmessage = async (event) => {
-      const msg = JSON.parse(event.data);
-
-      if (!msg) {
-        console.log("Failed to parse msg");
-        return;
-      }
-
-      const offerCandidate = msg.data;
-
-      if (!offerCandidate) {
-        console.log("Failed to parse offer msg data");
-        return;
-      }
-
-      switch (msg.event) {
-        case "offer":
-          console.log("Offer");
-          pc.setRemoteDescription(offerCandidate);
-
-          try {
-            const answer = await pc.createAnswer();
-            pc.setLocalDescription(answer);
-            socket.send(
-              JSON.stringify({
-                event: "answer",
-                data: answer,
-              })
-            );
-          } catch (e) {
-            console.error(e.message);
-          }
-
-          return;
-        case "candidate":
-          console.log("Candidate");
-          pc.addIceCandidate(offerCandidate);
-          return;
-        case "info":
-          dispatch({
-            type: "info",
-            viewers: msg.data.no_connections,
-          });
-      }
+        if (kind === "video") {
+            dispatch({ type: "initStream", stream: streams[0] });
+        }
     };
-  }
 
-  return (
-    <>
-      <Header></Header>
-      <MainContainer>
-        <VideoContainer>
-          <VideoPlayer src={state.stream} />
-          <VideoDetails viewers={state.viewers} />
-        </VideoContainer>
-        <LiveChat></LiveChat>
-      </MainContainer>
-    </>
-  );
+    pc.onicecandidate = (e) => {
+        const { candidate } = e;
+        if (candidate) {
+            console.log("Candidate success");
+            socket.send(
+                JSON.stringify({
+                    event: "candidate",
+                    data: e.candidate,
+                })
+            );
+        }
+    };
+
+    if (socket) {
+        socket.onmessage = async(event) => {
+            const msg = JSON.parse(event.data);
+
+            if (!msg) {
+                console.log("Failed to parse msg");
+                return;
+            }
+
+            const offerCandidate = msg.data;
+
+            if (!offerCandidate) {
+                console.log("Failed to parse offer msg data");
+                return;
+            }
+
+            switch (msg.event) {
+                case "offer":
+                    console.log("Offer");
+                    pc.setRemoteDescription(offerCandidate);
+
+                    try {
+                        const answer = await pc.createAnswer();
+                        pc.setLocalDescription(answer);
+                        socket.send(
+                            JSON.stringify({
+                                event: "answer",
+                                data: answer,
+                            })
+                        );
+                    } catch (e) {
+                        console.error(e.message);
+                    }
+
+                    return;
+                case "candidate":
+                    console.log("Candidate");
+                    pc.addIceCandidate(offerCandidate);
+                    return;
+                case "info":
+                    dispatch({
+                        type: "info",
+                        viewers: msg.data.no_connections,
+                    });
+            }
+        };
+    }
+
+    return ( <
+        >
+        <
+        MainContainer >
+        <
+        VideoContainer >
+        <
+        VideoPlayer src = { state.stream }
+        /> <
+        VideoDetails viewers = { state.viewers }
+        /> < /
+        VideoContainer > <
+        /MainContainer> < /
+        >
+    );
 };
 
 export default App;
